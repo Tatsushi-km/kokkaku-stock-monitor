@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>国策銘柄監視ダッシュボード</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">kokkaku-stock-monitor</p>
+        <h1>国策銘柄監視ダッシュボード</h1>
+      </div>
+      <button id="reloadButton" class="icon-button" type="button" title="CSVを再読み込み" aria-label="CSVを再読み込み">
+        ↻
+      </button>
+    </header>
+
+    <main class="app-shell">
+      <section class="data-check-card" aria-label="データ確認">
+        <div class="panel-heading">
+          <h2>データ確認</h2>
+          <span id="dataCheckUpdatedAt">未確認</span>
+        </div>
+        <div class="data-check-grid">
+          <article class="data-check-item">
+            <span>CSV読み込み成功</span>
+            <strong id="csvSuccessValue">確認中</strong>
+          </article>
+          <article class="data-check-item">
+            <span>読み込み元</span>
+            <strong id="csvSourceValue">-</strong>
+          </article>
+          <article class="data-check-item">
+            <span>読み込み時刻</span>
+            <strong id="csvLoadedAtValue">-</strong>
+          </article>
+          <article class="data-check-item">
+            <span>読み込んだ銘柄数</span>
+            <strong id="loadedRowCount">0</strong>
+          </article>
+          <article class="data-check-item">
+            <span>current_price 入力済み</span>
+            <strong id="priceFilledCount">0</strong>
+          </article>
+          <article class="data-check-item">
+            <span>volume_ratio 入力済み</span>
+            <strong id="volumeRatioFilledCount">0</strong>
+          </article>
+          <article class="data-check-item">
+            <span>score 入力済み</span>
+            <strong id="scoreFilledCount">0</strong>
+          </article>
+          <article class="data-check-item">
+            <span>status 入力済み</span>
+            <strong id="statusFilledCount">0</strong>
+          </article>
+          <article class="data-check-item">
+            <span>score/status 判定方式</span>
+            <strong id="scoreStatusModeValue">-</strong>
+          </article>
+        </div>
+        <p id="dataCheckMessage" class="data-check-message" hidden></p>
+      </section>
+
+      <section class="summary-grid" aria-label="サマリー">
+        <article class="summary-card">
+          <span class="summary-label">全銘柄数</span>
+          <strong id="totalCount">0</strong>
+        </article>
+        <article class="summary-card status-green">
+          <span class="summary-label">監視強化</span>
+          <strong id="watchCount">0</strong>
+        </article>
+        <article class="summary-card status-blue">
+          <span class="summary-label">押し目待ち</span>
+          <strong id="dipCount">0</strong>
+        </article>
+        <article class="summary-card status-red">
+          <span class="summary-label">過熱注意</span>
+          <strong id="heatCount">0</strong>
+        </article>
+      </section>
+
+      <section class="status-card-grid" id="statusCardGrid" aria-label="status別件数"></section>
+
+      <section class="dashboard-grid" aria-label="ランキングとテーマ分析">
+        <article class="dashboard-panel theme-panel">
+          <div class="panel-heading">
+            <h2>テーマ別 平均score</h2>
+            <span id="themeAverageCount">0件</span>
+          </div>
+          <div id="themeAverageList" class="metric-list"></div>
+        </article>
+
+        <article class="dashboard-panel">
+          <div class="panel-heading">
+            <h2>score 上位5銘柄</h2>
+          </div>
+          <ol id="topScoreList" class="ranking-list"></ol>
+        </article>
+
+        <article class="dashboard-panel">
+          <div class="panel-heading">
+            <h2>出来高倍率 上位5銘柄</h2>
+          </div>
+          <ol id="topVolumeRatioList" class="ranking-list"></ol>
+        </article>
+      </section>
+
+      <section class="controls" aria-label="フィルター">
+        <label>
+          <span>theme</span>
+          <select id="themeFilter">
+            <option value="">すべて</option>
+          </select>
+        </label>
+        <label>
+          <span>priority</span>
+          <select id="priorityFilter">
+            <option value="">すべて</option>
+          </select>
+        </label>
+        <label>
+          <span>status</span>
+          <select id="statusFilter">
+            <option value="">すべて</option>
+          </select>
+        </label>
+        <label>
+          <span>core</span>
+          <select id="coreFilter">
+            <option value="">すべて</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="table-section">
+        <p class="table-update-note">データ更新後はブラウザを再読み込みしてください。</p>
+        <div class="table-toolbar">
+          <p id="resultCount">0件を表示</p>
+          <button id="scoreSortButton" class="sort-button" type="button" aria-pressed="true">
+            score 高い順
+          </button>
+        </div>
+
+        <div class="table-scroll-hint">横にスクロールして列を確認できます</div>
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col class="col-code" />
+              <col class="col-name" />
+              <col class="col-theme" />
+              <col class="col-priority" />
+              <col class="col-price" />
+              <col class="col-change" />
+              <col class="col-volume-ratio" />
+              <col class="col-gap" />
+              <col class="col-gap" />
+              <col class="col-score" />
+              <col class="col-status" />
+              <col class="col-memo" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>code</th>
+                <th>name</th>
+                <th>theme</th>
+                <th>priority</th>
+                <th>current_price</th>
+                <th>change_pct</th>
+                <th>volume_ratio</th>
+                <th>ma25_gap</th>
+                <th>ma75_gap</th>
+                <th>score</th>
+                <th>status</th>
+                <th>memo</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableBody"></tbody>
+          </table>
+        </div>
+
+        <p id="emptyState" class="empty-state" hidden>表示できる銘柄がありません。</p>
+        <p id="errorState" class="error-state" hidden></p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
