@@ -86,7 +86,7 @@ statusは次の順番で判定します。
 
 ## daily_inputテンプレート作成
 
-`data/stocks_master.csv` の `code` と `name` から、Googleスプレッドシートの `daily_input` に貼り付けるためのCSVテンプレートを作成できます。
+`data/stocks_master.csv` の `code` と `name` から、Googleスプレッドシートの `daily_input` に貼り付けるためのCSVを作成できます。
 
 実行コマンド:
 
@@ -94,10 +94,11 @@ statusは次の順番で判定します。
 python scripts/create_daily_input_template.py
 ```
 
-出力ファイル:
+出力ファイルは2つです。
 
 ```text
 data/daily_input_template.csv
+data/daily_input_sample.csv
 ```
 
 出力列:
@@ -106,7 +107,24 @@ data/daily_input_template.csv
 code,name,current_price,change_pct,volume,volume_ratio,ma25_gap,ma75_gap,per,pbr,credit_ratio,next_earnings
 ```
 
-`current_price` 以降の列は空欄で出力されます。作成した `data/daily_input_template.csv` を開き、Googleスプレッドシートの `daily_input` シートへ貼り付けて、日々の株価・出来高・指標を入力してください。
+### daily_input_template.csv の使い方
+
+`data/daily_input_template.csv` は、`code` と `name` だけが入り、`current_price` 以降の列は空欄です。日々の更新作業ではこのファイルを使い、Googleスプレッドシートの `daily_input` に貼り付けたあと、株価・騰落率・出来高・移動平均乖離率などを入力してください。
+
+### daily_input_sample.csv の使い方
+
+`data/daily_input_sample.csv` は、動作確認用の仮データ入りCSVです。仮データは実データではなく、アプリの表示、score/status自動計算、ランキング、フィルターが動くかを確認するためのテスト値です。実際の投資判断や日々の更新には使わないでください。
+
+### Googleスプレッドシートの daily_input に貼り付ける手順
+
+1. `python scripts/create_daily_input_template.py` を実行します。
+2. 通常運用では `data/daily_input_template.csv` を開きます。
+3. 動作確認だけしたい場合は `data/daily_input_sample.csv` を開きます。
+4. CSVのヘッダー行を含めてコピーします。
+5. Googleスプレッドシートの `daily_input` シートを開きます。
+6. `A1` セルを選択して貼り付けます。
+7. 通常運用では、`current_price` 以降の空欄をその日の値で入力します。
+8. 公開CSVを更新したあと、アプリ画面右上の更新ボタンを押します。
 
 ## 使い方
 
