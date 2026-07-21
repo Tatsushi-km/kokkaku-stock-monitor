@@ -1,4 +1,5 @@
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSv8jFY5yPOg5mqVzwU_ZB38lw38aaZn3YW4FkcpiNERDSVRh1eSm8vfjfNrKUM_OPKvgvPpwcRRXE0/pub?gid=2077407360&single=true&output=csv";
+const SCORE_STATUS_MODE = "auto"; // "auto": アプリ自動計算, "csv": CSV値優先
 const LOCAL_CSV_PATHS = ["../data/stocks_master.csv", "/data/stocks_master.csv"];
 const COLUMNS = [
   "code",
@@ -269,17 +270,24 @@ function normalizeRows(rows) {
     const rawScore = normalized.score;
     const rawStatus = normalized.status;
     const calculatedScore = calculateScore(normalized);
-    const finalScore = hasText(rawScore) ? rawScore : String(calculatedScore);
+    const calculationMode = getScoreStatusSetting();
+    const useAutoScore = calculationMode === "auto" || !hasText(rawScore);
+    const finalScore = useAutoScore ? String(calculatedScore) : rawScore;
+    const useAutoStatus = calculationMode === "auto" || !hasText(rawStatus);
 
     normalized._rawScore = rawScore;
     normalized._rawStatus = rawStatus;
-    normalized._scoreSource = hasText(rawScore) ? "csv" : "auto";
-    normalized._statusSource = hasText(rawStatus) ? "csv" : "auto";
+    normalized._scoreSource = useAutoScore ? "auto" : "csv";
+    normalized._statusSource = useAutoStatus ? "auto" : "csv";
     normalized.score = finalScore;
-    normalized.status = hasText(rawStatus) ? rawStatus : calculateStatus(normalized, finalScore);
+    normalized.status = useAutoStatus ? calculateStatus(normalized, finalScore) : rawStatus;
 
     return normalized;
   });
+}
+
+function getScoreStatusSetting() {
+  return SCORE_STATUS_MODE === "auto" ? "auto" : "csv";
 }
 
 function calculateScore(row) {
@@ -288,12 +296,14 @@ function calculateScore(row) {
   const volumeRatio = parseNumber(row.volume_ratio);
   const ma25Gap = parseNumber(row.ma25_gap);
   const ma75Gap = parseNumber(row.ma75_gap);
-  const per = parseNumber(row.per);
 
   if (changePct !== null && changePct > 0) {
     score += 1;
   }
   if (volumeRatio !== null && volumeRatio >= 1.5) {
+    score += 1;
+  }
+  if (volumeRatio !== null && volumeRatio >= 2) {
     score += 1;
   }
   if (ma25Gap !== null && ma25Gap > 0) {
@@ -302,24 +312,43 @@ function calculateScore(row) {
   if (ma75Gap !== null && ma75Gap > 0) {
     score += 1;
   }
-  if (per !== null && per < 60) {
+  if (ma25Gap !== null && ma25Gap >= 0 && ma25Gap <= 10) {
+    score += 1;
+  }
+  if (ma75Gap !== null && ma75Gap >= 0 && ma75Gap <= 20) {
     score += 1;
   }
   if (ma25Gap !== null && ma25Gap >= 15) {
+    score -= 2;
+  }
+  if (ma25Gap !== null && ma25Gap >= 25) {
     score -= 1;
   }
   if (ma25Gap !== null && ma25Gap <= -10) {
     score -= 1;
   }
+  if (ma75Gap !== null && ma75Gap <= -10) {
+    score -= 1;
+  }
+  if (volumeRatio !== null && volumeRatio < 0.7) {
+    score -= 1;
+  }
+  if (changePct !== null && changePct <= -3) {
+    score -= 1;
+  }
 
-  return score;
+  return clamp(score, 0, 5);
 }
 
 function calculateStatus(row, scoreValue) {
   const ma25Gap = parseNumber(row.ma25_gap);
+  const volumeRatio = parseNumber(row.volume_ratio);
   const score = toNumber(scoreValue);
 
-  if (ma25Gap !== null && ma25Gap >= 15) {
+  if (ma25Gap !== null && ma25Gap >= 25) {
+    return "過熱注意";
+  }
+  if (ma25Gap !== null && ma25Gap >= 15 && volumeRatio !== null && volumeRatio >= 2) {
     return "過熱注意";
   }
   if (ma25Gap !== null && ma25Gap <= -10) {
@@ -332,6 +361,10 @@ function calculateStatus(row, scoreValue) {
     return "条件待ち";
   }
   return "調整中";
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function populateFilters() {
@@ -465,6 +498,10 @@ function countRawFilled(rows, key) {
 function getScoreStatusMode(rows) {
   if (rows.length === 0) {
     return "-";
+  }
+
+  if (getScoreStatusSetting() === "auto") {
+    return "アプリ自動計算";
   }
 
   const hasCsvValue = rows.some((row) => row._scoreSource === "csv" || row._statusSource === "csv");
