@@ -273,6 +273,58 @@ py -m pip install -r requirements.txt
 
 `.env` にはJ-Quants APIキーが入るため、絶対にGitHubへアップロードしないでください。GitHubへ置くのは `.env.example` だけです。
 
+### 毎日のJ-Quantsデータ更新手順
+
+毎日の運用では、次の順番で更新します。
+
+1. `update_jquants.bat` をダブルクリックします。
+2. J-Quantsから株価日足データを取得します。
+3. `data\daily_input_jquants.csv` が作成・更新されたことを確認します。
+4. Googleスプレッドシートを開きます。
+5. `daily_input` シートを開きます。
+6. `data\daily_input_jquants.csv` をインポート、または内容を貼り付けます。
+7. `stocks_master` に `daily_input` の内容が反映されているか確認します。
+8. GitHub Pagesで公開しているアプリを開きます。
+9. 画面右上の更新ボタンを押します。
+10. dashboardでサマリー、ランキング、status別件数を確認します。
+
+### Googleスプレッドシートへの反映方法
+
+推奨は、Googleスプレッドシートのインポート機能を使う方法です。
+
+1. Googleスプレッドシートで `daily_input` シートを開きます。
+2. メニューから `ファイル → インポート → アップロード` を選びます。
+3. `data\daily_input_jquants.csv` をアップロードします。
+4. インポート場所は `現在のシートを置換` を選びます。
+5. 区切り文字は `カンマ` を選びます。
+6. インポート後、`daily_input` の `A1` からヘッダーと各銘柄データが正しく入っていることを確認します。
+
+貼り付けで反映する場合は、`data\daily_input_jquants.csv` を開き、ヘッダー行を含めて全体をコピーして、`daily_input` シートの `A1` セルから貼り付けます。
+
+### 更新後の確認ポイント
+
+- `stocks_master` の `current_price` が30件入っているか確認します。
+- `volume_ratio` が入っているか確認します。
+- `score` と `status` が更新されているか確認します。
+- QPS研究所など一部銘柄が空欄でも、J-Quants側の取得データ不足が原因であれば許容します。
+- GitHub Pagesアプリのdashboardで、score上位、出来高倍率上位、status別件数を確認します。
+
+### J-Quants更新のトラブル対応
+
+- `429 Too Many Requests` が出た場合は、15〜30分待ってから再実行します。
+- 取得が重い、または429が続く場合は、`.env` の `JQUANTS_REQUEST_SLEEP` を大きくします。
+- 例: `JQUANTS_REQUEST_SLEEP=3.0` または `JQUANTS_REQUEST_SLEEP=5.0`
+- 一部銘柄が空欄の場合は、まず `data\daily_input_jquants.csv` 側で該当銘柄の行を確認します。
+- `daily_input_jquants.csv` が空欄でも、スクリプト画面にエラー内容が表示されている場合は、その内容を確認します。
+- `.env` にはJ-Quants APIキーが入るため、絶対にGitHubへアップロードしないでください。
+
+### 推奨運用
+
+- 1日1回、朝または夜に更新します。
+- 更新後はdashboardの `score上位`、`出来高倍率上位`、`status別件数` を確認します。
+- 自動判定だけで判断せず、気になる銘柄はチャートや出来高推移を個別に確認します。
+- Googleスプレッドシート側を更新した後は、GitHub Pagesアプリの右上の更新ボタンを押して最新CSVを読み込みます。
+
 ## GitHub Pages
 
 このアプリは静的ファイルだけで動くため、GitHub Pagesで公開できます。
