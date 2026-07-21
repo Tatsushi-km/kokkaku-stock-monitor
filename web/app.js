@@ -59,6 +59,7 @@ const elements = {
   scoreStatusModeValue: document.getElementById("scoreStatusModeValue"),
   dataCheckMessage: document.getElementById("dataCheckMessage"),
   statusCardGrid: document.getElementById("statusCardGrid"),
+  todayFocusList: document.getElementById("todayFocusList"),
   themeAverageCount: document.getElementById("themeAverageCount"),
   themeAverageList: document.getElementById("themeAverageList"),
   topScoreList: document.getElementById("topScoreList"),
@@ -402,6 +403,7 @@ function render() {
   renderDataCheck();
   renderSummary();
   renderStatusCards(filteredRows);
+  renderTodayFocus(filteredRows);
   renderThemeAverages(filteredRows);
   renderRankings(filteredRows);
   renderTable(sortedRows);
@@ -545,6 +547,95 @@ function renderStatusCards(rows) {
     card.append(badge, count);
     elements.statusCardGrid.appendChild(card);
   });
+}
+
+function renderTodayFocus(rows) {
+  elements.todayFocusList.innerHTML = "";
+  const focusRows = rows
+    .filter(isTodayFocusRow)
+    .sort(sortTodayFocus)
+    .slice(0, 5);
+
+  if (focusRows.length === 0) {
+    renderEmpty(elements.todayFocusList, "該当なし");
+    return;
+  }
+
+  focusRows.forEach((row) => {
+    const item = document.createElement("li");
+    item.className = "focus-item";
+
+    const main = document.createElement("div");
+    main.className = "focus-main";
+
+    const title = document.createElement("strong");
+    title.textContent = `${row.code || "-"} ${row.name || "-"}`;
+
+    const theme = document.createElement("span");
+    theme.textContent = row.theme || "-";
+
+    const metrics = document.createElement("div");
+    metrics.className = "focus-metrics";
+    metrics.append(
+      metricChip("score", formatNumber(row.score)),
+      metricChip("volume_ratio", formatNumber(row.volume_ratio)),
+      metricChip("ma25_gap", formatPercent(row.ma25_gap))
+    );
+
+    main.append(title, theme);
+    item.append(main, metrics);
+    elements.todayFocusList.appendChild(item);
+  });
+}
+
+function isTodayFocusRow(row) {
+  const score = parseNumber(row.score);
+  const volumeRatio = parseNumber(row.volume_ratio);
+  const ma25Gap = parseNumber(row.ma25_gap);
+
+  return (
+    score !== null &&
+    score >= 4 &&
+    row.status === "監視強化" &&
+    volumeRatio !== null &&
+    volumeRatio >= 1.5 &&
+    ma25Gap !== null &&
+    ma25Gap >= 0 &&
+    ma25Gap < 15
+  );
+}
+
+function sortTodayFocus(a, b) {
+  const scoreDiff = toNumber(b.score) - toNumber(a.score);
+  if (scoreDiff !== 0) {
+    return scoreDiff;
+  }
+
+  const volumeDiff = toNumber(b.volume_ratio) - toNumber(a.volume_ratio);
+  if (volumeDiff !== 0) {
+    return volumeDiff;
+  }
+
+  const ma25Diff = toNumber(a.ma25_gap) - toNumber(b.ma25_gap);
+  if (ma25Diff !== 0) {
+    return ma25Diff;
+  }
+
+  return String(a.code).localeCompare(String(b.code), "ja", { numeric: true });
+}
+
+function metricChip(labelText, valueText) {
+  const chip = document.createElement("span");
+  chip.className = "focus-chip";
+
+  const label = document.createElement("small");
+  label.textContent = labelText;
+
+  const value = document.createElement("b");
+  value.textContent = valueText;
+
+  chip.append(label, value);
+  return chip;
 }
 
 function renderThemeAverages(rows) {
