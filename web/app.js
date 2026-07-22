@@ -60,6 +60,8 @@ const elements = {
   dataCheckMessage: document.getElementById("dataCheckMessage"),
   statusCardGrid: document.getElementById("statusCardGrid"),
   todayFocusList: document.getElementById("todayFocusList"),
+  dipCandidateList: document.getElementById("dipCandidateList"),
+  deepDipWarningList: document.getElementById("deepDipWarningList"),
   themeAverageCount: document.getElementById("themeAverageCount"),
   themeAverageList: document.getElementById("themeAverageList"),
   topScoreList: document.getElementById("topScoreList"),
@@ -404,6 +406,8 @@ function render() {
   renderSummary();
   renderStatusCards(filteredRows);
   renderTodayFocus(filteredRows);
+  renderDipCandidates(filteredRows);
+  renderDeepDipWarnings(filteredRows);
   renderThemeAverages(filteredRows);
   renderRankings(filteredRows);
   renderTable(sortedRows);
@@ -578,13 +582,93 @@ function renderTodayFocus(rows) {
     metrics.className = "focus-metrics";
     metrics.append(
       metricChip("score", formatNumber(row.score)),
-      metricChip("volume_ratio", formatNumber(row.volume_ratio)),
-      metricChip("ma25_gap", formatPercent(row.ma25_gap))
+      metricChip("出来高倍率", formatNumber(row.volume_ratio)),
+      metricChip("25日乖離", formatPercent(row.ma25_gap))
     );
 
     main.append(title, theme);
     item.append(main, metrics);
     elements.todayFocusList.appendChild(item);
+  });
+}
+
+function renderDipCandidates(rows) {
+  elements.dipCandidateList.innerHTML = "";
+  const dipRows = rows
+    .filter(isDipCandidateRow)
+    .sort(sortDipCandidates)
+    .slice(0, 5);
+
+  if (dipRows.length === 0) {
+    renderEmpty(elements.dipCandidateList, "該当なし");
+    return;
+  }
+
+  dipRows.forEach((row) => {
+    const item = document.createElement("li");
+    item.className = "focus-item";
+
+    const main = document.createElement("div");
+    main.className = "focus-main";
+
+    const title = document.createElement("strong");
+    title.textContent = `${row.code || "-"} ${row.name || "-"}`;
+
+    const theme = document.createElement("span");
+    theme.textContent = row.theme || "-";
+
+    const metrics = document.createElement("div");
+    metrics.className = "focus-metrics";
+    metrics.append(
+      metricChip("score", formatNumber(row.score)),
+      metricChip("出来高倍率", formatNumber(row.volume_ratio)),
+      metricChip("25日乖離", formatPercent(row.ma25_gap)),
+      metricChip("75日乖離", formatPercent(row.ma75_gap))
+    );
+
+    main.append(title, theme);
+    item.append(main, metrics);
+    elements.dipCandidateList.appendChild(item);
+  });
+}
+
+function renderDeepDipWarnings(rows) {
+  elements.deepDipWarningList.innerHTML = "";
+  const warningRows = rows
+    .filter(isDeepDipWarningRow)
+    .sort(sortDeepDipWarnings)
+    .slice(0, 5);
+
+  if (warningRows.length === 0) {
+    renderEmpty(elements.deepDipWarningList, "該当なし");
+    return;
+  }
+
+  warningRows.forEach((row) => {
+    const item = document.createElement("li");
+    item.className = "focus-item";
+
+    const main = document.createElement("div");
+    main.className = "focus-main";
+
+    const title = document.createElement("strong");
+    title.textContent = `${row.code || "-"} ${row.name || "-"}`;
+
+    const theme = document.createElement("span");
+    theme.textContent = row.theme || "-";
+
+    const metrics = document.createElement("div");
+    metrics.className = "focus-metrics";
+    metrics.append(
+      metricChip("score", formatNumber(row.score)),
+      metricChip("出来高倍率", formatNumber(row.volume_ratio)),
+      metricChip("25日乖離", formatPercent(row.ma25_gap)),
+      metricChip("75日乖離", formatPercent(row.ma75_gap))
+    );
+
+    main.append(title, theme);
+    item.append(main, metrics);
+    elements.deepDipWarningList.appendChild(item);
   });
 }
 
@@ -602,6 +686,34 @@ function isTodayFocusRow(row) {
     ma25Gap !== null &&
     ma25Gap >= 0 &&
     ma25Gap < 15
+  );
+}
+
+function isDipCandidateRow(row) {
+  const ma25Gap = parseNumber(row.ma25_gap);
+  const ma75Gap = parseNumber(row.ma75_gap);
+  const volumeRatio = parseNumber(row.volume_ratio);
+
+  return (
+    hasText(row.current_price) &&
+    !isDeepDipWarningRow(row) &&
+    ma25Gap !== null &&
+    ma25Gap >= -10 &&
+    ma25Gap < 0 &&
+    ma75Gap !== null &&
+    ma75Gap > -20 &&
+    volumeRatio !== null &&
+    volumeRatio >= 0.8
+  );
+}
+
+function isDeepDipWarningRow(row) {
+  const ma25Gap = parseNumber(row.ma25_gap);
+  const ma75Gap = parseNumber(row.ma75_gap);
+
+  return (
+    hasText(row.current_price) &&
+    ((ma25Gap !== null && ma25Gap <= -10) || (ma75Gap !== null && ma75Gap <= -20))
   );
 }
 
@@ -624,6 +736,43 @@ function sortTodayFocus(a, b) {
   return String(a.code).localeCompare(String(b.code), "ja", { numeric: true });
 }
 
+function sortDipCandidates(a, b) {
+  const scoreDiff = toNumber(b.score) - toNumber(a.score);
+  if (scoreDiff !== 0) {
+    return scoreDiff;
+  }
+
+  const volumeDiff = numberForSort(b.volume_ratio, Number.NEGATIVE_INFINITY) -
+    numberForSort(a.volume_ratio, Number.NEGATIVE_INFINITY);
+  if (volumeDiff !== 0) {
+    return volumeDiff;
+  }
+
+  const ma25Diff = numberForSort(b.ma25_gap, Number.NEGATIVE_INFINITY) -
+    numberForSort(a.ma25_gap, Number.NEGATIVE_INFINITY);
+  if (ma25Diff !== 0) {
+    return ma25Diff;
+  }
+
+  return String(a.code).localeCompare(String(b.code), "ja", { numeric: true });
+}
+
+function sortDeepDipWarnings(a, b) {
+  const ma25Diff = numberForSort(a.ma25_gap, Number.POSITIVE_INFINITY) -
+    numberForSort(b.ma25_gap, Number.POSITIVE_INFINITY);
+  if (ma25Diff !== 0) {
+    return ma25Diff;
+  }
+
+  const ma75Diff = numberForSort(a.ma75_gap, Number.POSITIVE_INFINITY) -
+    numberForSort(b.ma75_gap, Number.POSITIVE_INFINITY);
+  if (ma75Diff !== 0) {
+    return ma75Diff;
+  }
+
+  return String(a.code).localeCompare(String(b.code), "ja", { numeric: true });
+}
+
 function metricChip(labelText, valueText) {
   const chip = document.createElement("span");
   chip.className = "focus-chip";
@@ -636,6 +785,11 @@ function metricChip(labelText, valueText) {
 
   chip.append(label, value);
   return chip;
+}
+
+function numberForSort(value, fallback) {
+  const number = parseNumber(value);
+  return number === null ? fallback : number;
 }
 
 function renderThemeAverages(rows) {

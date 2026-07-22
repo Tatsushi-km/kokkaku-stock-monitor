@@ -216,7 +216,7 @@ h1 {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
   margin-top: 18px;
 }
@@ -262,6 +262,14 @@ h1 {
   border-left: 5px solid var(--green);
 }
 
+.dip-panel {
+  border-left: 5px solid var(--blue);
+}
+
+.deep-panel {
+  border-left: 5px solid var(--red);
+}
+
 .focus-list {
   list-style: none;
   counter-reset: focus;
@@ -293,6 +301,16 @@ h1 {
   font-weight: 800;
 }
 
+.dip-panel .focus-item::before {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.deep-panel .focus-item::before {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
 .focus-main {
   min-width: 0;
 }
@@ -318,7 +336,7 @@ h1 {
 .focus-metrics {
   grid-column: 2;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 6px;
   margin-top: 8px;
 }
