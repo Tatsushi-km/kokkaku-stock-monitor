@@ -264,14 +264,27 @@ J-Quants V2はAPIキー方式です。このスクリプトでは `JQUANTS_API_K
 
 | 列 | 内容 |
 | --- | --- |
-| `current_price` | 最新営業日の終値 |
-| `change_pct` | `(最新終値 - 前営業日終値) / 前営業日終値 * 100` |
-| `volume` | 最新営業日の出来高 |
+| `current_price` | `price_date` 時点の終値 |
+| `change_pct` | `price_date` の終値と、その直前取引日の終値から計算 |
+| `volume` | `price_date` 時点の出来高 |
 | `volume_ratio` | `最新出来高 / 20日平均出来高` |
 | `ma25_gap` | `(最新終値 - 25日移動平均) / 25日移動平均 * 100` |
 | `ma75_gap` | `(最新終値 - 75日移動平均) / 75日移動平均 * 100` |
+| `price_date` | `current_price` に採用した終値の日付 |
 
 `per`, `pbr`, `credit_ratio`, `next_earnings` は最初は空欄で出力します。
+
+`current_price` はリアルタイム株価ではありません。J-Quants Light planで取得できる最新の日次データから、Closeが存在する最新取引日の終値を使います。日々の更新では、`daily_input_jquants.csv` の `price_date` を確認し、想定している取引日データか見てください。
+
+J-Quants取得CSVの出力列:
+
+```csv
+code,name,current_price,change_pct,volume,volume_ratio,ma25_gap,ma75_gap,per,pbr,credit_ratio,next_earnings,price_date
+```
+
+Googleスプレッドシートの `daily_input` に取り込む場合は、最後の列に `price_date` を用意しておくと、株価データの日付を確認しやすくなります。
+
+スクリプト実行時のログには、出力CSVのヘッダー、`price_date` の最小日付、`price_date` の最大日付、出力行数が表示されます。`current_price` が取得できなかった銘柄は、`price_date` も空欄のまま出力されます。
 
 ### 認証情報の設定
 
@@ -294,6 +307,7 @@ JQUANTS_API_KEY=your_api_key_here
 JQUANTS_FROM_DATE=
 JQUANTS_TO_DATE=
 JQUANTS_REQUEST_SLEEP=1.5
+JQUANTS_FORCE_REFRESH=false
 ```
 
 `.env` にはAPIキーが入るため、GitHubへアップロードしないでください。このリポジトリでは `.gitignore` で `.env` を除外しています。GitHubへ置くのは `.env.example` だけです。
@@ -314,7 +328,14 @@ JQUANTS_TO_DATE=20260428
 JQUANTS_FROM_DATE=20241101
 ```
 
-`JQUANTS_TO_DATE` が未設定の場合、スクリプトは今日ではなく安全側で約90日前を取得終了日にします。`JQUANTS_FROM_DATE` が未設定の場合、取得開始日は終了日から約180日前になります。
+`JQUANTS_TO_DATE` が未設定または空欄の場合、スクリプトは今日ではなく安全側で約90日前を取得終了日にします。`JQUANTS_TO_DATE=auto` の場合は今日の日付を取得終了日にします。
+
+`JQUANTS_FROM_DATE` が未設定、空欄、または `auto` の場合、取得開始日は取得終了日から約180日前になります。
+
+```env
+JQUANTS_TO_DATE=auto
+JQUANTS_FROM_DATE=auto
+```
 
 400エラー本文に取得可能期間が含まれている場合は、スクリプトが終了日をその上限日に補正して再試行します。
 
@@ -325,6 +346,12 @@ JQUANTS_REQUEST_SLEEP=3.0
 ```
 
 429 Too Many Requests が返った場合、スクリプトは 5秒、15秒、30秒の指数バックオフで再試行します。それでも失敗した銘柄は空欄のままにして、次の銘柄へ進みます。
+
+古いキャッシュを使わずに再取得したい場合は、`.env` に次を設定します。
+
+```env
+JQUANTS_FORCE_REFRESH=true
+```
 
 ### 実行方法
 
@@ -396,7 +423,7 @@ py -m pip install -r requirements.txt
 
 1. `update_jquants.bat` をダブルクリックします。
 2. J-Quantsから株価日足データを取得します。
-3. `data\daily_input_jquants.csv` が作成・更新されたことを確認します。
+3. `data\daily_input_jquants.csv` が作成・更新され、`price_date` が入っていることを確認します。
 4. Googleスプレッドシートを開きます。
 5. `daily_input` シートを開きます。
 6. `data\daily_input_jquants.csv` をインポート、または内容を貼り付けます。
@@ -420,7 +447,9 @@ py -m pip install -r requirements.txt
 
 ### 更新後の確認ポイント
 
-- `stocks_master` の `current_price` が30件入っているか確認します。
+- `stocks_master` の `current_price` が監視対象件数分入っているか確認します。
+- `daily_input_jquants.csv` の `price_date` が入っているか確認します。
+- `current_price` は `price_date` 時点の終値であり、リアルタイム株価ではない点を確認します。
 - `volume_ratio` が入っているか確認します。
 - `score` と `status` が更新されているか確認します。
 - QPS研究所など一部銘柄が空欄でも、J-Quants側の取得データ不足が原因であれば許容します。
