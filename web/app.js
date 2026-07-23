@@ -23,6 +23,7 @@ const COLUMNS = [
   "score",
   "status",
   "note",
+  "price_date",
 ];
 const STATUS_ORDER = ["監視強化", "押し目待ち", "条件待ち", "調整中", "過熱注意"];
 
@@ -57,6 +58,7 @@ const elements = {
   scoreFilledCount: document.getElementById("scoreFilledCount"),
   statusFilledCount: document.getElementById("statusFilledCount"),
   scoreStatusModeValue: document.getElementById("scoreStatusModeValue"),
+  priceDateValue: document.getElementById("priceDateValue"),
   dataCheckMessage: document.getElementById("dataCheckMessage"),
   statusCardGrid: document.getElementById("statusCardGrid"),
   todayFocusList: document.getElementById("todayFocusList"),
@@ -449,6 +451,7 @@ function renderDataCheck() {
   elements.scoreFilledCount.textContent = scoreFilled;
   elements.statusFilledCount.textContent = statusFilled;
   elements.scoreStatusModeValue.textContent = getScoreStatusMode(rows);
+  elements.priceDateValue.textContent = getPriceDateDisplay(rows);
   elements.csvSourceValue.textContent = state.csvSource || "-";
   elements.csvLoadedAtValue.textContent = state.lastCheckedAt || "-";
   elements.dataCheckUpdatedAt.textContent = state.lastCheckedAt
@@ -517,6 +520,86 @@ function getScoreStatusMode(rows) {
     return "CSV値 / アプリ自動計算";
   }
   return hasAutoValue ? "アプリ自動計算" : "CSV値";
+}
+
+function getPriceDateDisplay(rows) {
+  const dates = [...new Set(rows.map((row) => normalizePriceDate(row.price_date)).filter(Boolean))]
+    .sort();
+
+  if (dates.length === 0) {
+    return "-";
+  }
+
+  if (dates.length === 1) {
+    return dates[0];
+  }
+
+  return `${dates[0]}〜${dates[dates.length - 1]}`;
+}
+
+function normalizePriceDate(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  const separatedDate = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (separatedDate) {
+    return formatDateParts(separatedDate[1], separatedDate[2], separatedDate[3]);
+  }
+
+  const compactDate = text.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (compactDate) {
+    return formatDateParts(compactDate[1], compactDate[2], compactDate[3]);
+  }
+
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    return formatSpreadsheetSerialDate(Number(text));
+  }
+
+  return text;
+}
+
+function formatDateParts(yearText, monthText, dayText) {
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!isValidDateParts(year, month, day)) {
+    return "";
+  }
+
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function formatSpreadsheetSerialDate(serialValue) {
+  if (!Number.isFinite(serialValue) || serialValue < 1 || serialValue > 60000) {
+    return "";
+  }
+
+  const wholeDays = Math.floor(serialValue);
+  const utcMillis = (wholeDays - 25569) * 86400 * 1000;
+  const date = new Date(utcMillis);
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  if (!isValidDateParts(year, month, day)) {
+    return "";
+  }
+
+  return formatDateParts(String(year), String(month), String(day));
+}
+
+function isValidDateParts(year, month, day) {
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 function showDataCheckMessage(message, className) {
