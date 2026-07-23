@@ -1017,7 +1017,8 @@ function renderTable(rows) {
       td(formatPercent(row.ma75_gap), "numeric"),
       td(formatNumber(row.score), "numeric"),
       statusTd(row.status),
-      td(row.memo, "memo-cell")
+      td(row.memo, "memo-cell"),
+      stockLinksTd(row)
     );
     elements.tableBody.appendChild(tr);
   });
@@ -1039,6 +1040,63 @@ function statusTd(status) {
   badge.textContent = status || "-";
   cell.appendChild(badge);
   return cell;
+}
+
+function stockLinksTd(row) {
+  const cell = document.createElement("td");
+  cell.className = "links-cell";
+
+  const code = getValidStockCode(row.code);
+  if (!code) {
+    cell.textContent = "-";
+    return cell;
+  }
+
+  const links = [
+    {
+      label: "Yahoo",
+      title: "Yahoo!ファイナンスで確認",
+      url: `https://finance.yahoo.co.jp/quote/${code}.T`,
+    },
+    {
+      label: "株探",
+      title: "株探で確認",
+      url: `https://kabutan.jp/stock/chart?code=${code}`,
+    },
+    {
+      label: "TV",
+      title: "TradingViewで確認",
+      url: `https://jp.tradingview.com/symbols/TSE-${code}/`,
+    },
+    {
+      label: "TDnet",
+      title: "TDnetで適時開示を確認",
+      url: "https://www.release.tdnet.info/inbs/I_main_00.html",
+    },
+  ];
+
+  const linkGroup = document.createElement("div");
+  linkGroup.className = "external-links";
+
+  links.forEach((link) => {
+    const anchor = document.createElement("a");
+    anchor.className = "external-link-button";
+    anchor.href = link.url;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.title = link.title;
+    anchor.setAttribute("aria-label", `${row.code || code} ${row.name || ""} ${link.title}`.trim());
+    anchor.textContent = link.label;
+    linkGroup.appendChild(anchor);
+  });
+
+  cell.appendChild(linkGroup);
+  return cell;
+}
+
+function getValidStockCode(value) {
+  const code = String(value || "").trim();
+  return /^\d{4}$/.test(code) ? code : "";
 }
 
 function statusClass(status) {

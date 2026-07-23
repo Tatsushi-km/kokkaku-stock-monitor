@@ -576,7 +576,7 @@ select {
 
 table {
   width: 100%;
-  min-width: 1700px;
+  min-width: 2020px;
   table-layout: fixed;
   border-collapse: collapse;
 }
@@ -617,6 +617,10 @@ table {
 
 .col-memo {
   width: 498px;
+}
+
+.col-links {
+  width: 300px;
 }
 
 th,
@@ -662,6 +666,53 @@ td.numeric {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: normal;
+}
+
+.links-cell {
+  min-width: 260px;
+  white-space: nowrap;
+}
+
+.external-links,
+.stock-links {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.external-link-button,
+.stock-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 28px;
+  min-width: 38px;
+  padding: 4px 8px;
+  border: 1px solid #d0d7de;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1f6feb;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  writing-mode: horizontal-tb;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.external-link-button:hover,
+.external-link-button:focus-visible,
+.stock-link:hover,
+.stock-link:focus-visible {
+  background: #f6f8fa;
+  outline: none;
+  text-decoration: none;
 }
 
 .status-badge {
@@ -790,11 +841,22 @@ td.numeric {
   }
 
   table {
-    min-width: 1240px;
+    min-width: 2020px;
   }
 
   th,
   td {
     padding: 10px 8px;
+  }
+
+  .external-links,
+  .stock-links {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .external-link-button,
+  .stock-link {
+    min-height: 30px;
   }
 }
